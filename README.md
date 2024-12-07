@@ -62,15 +62,15 @@ class CoreRepo {
   }
 
   // Fetching and caching for first api call
-  Future<List<NewsArticleDto>> getDataFromFirstApiCall() => autoSync.fetchAndCacheData(
+  Future<List<FirstApiDto>> getDataFromFirstApiCall() => autoSync.fetchAndCacheData(
         'first_api_call',
         () => CoreApiClient(buildDioClient(null)).getDataFromFirstApiCall(), // API call to get data
-        (json) => NewsArticleDto.fromJson(json),  // Mapping the JSON response to DTO
+        (json) => FirstApiDto.fromJson(json),  // Mapping the JSON response to DTO
         (dto) => dto.toJson(),  // Mapping the DTO to JSON for caching
       );
 
   // Fetching and caching another api call
-  Future<List<PublicWelfareMessageDto>> getDataFromSecondApiCall() => autoSync.fetchAndCacheData(
+  Future<List<SecondApiDto>> getDataFromSecondApiCall() => autoSync.fetchAndCacheData(
         'second_api_call',
         () => CoreApiClient(buildDioClient(null)).getDataFromSecondApiCall(), // API call to get data
         (json) => SecondApiDto.fromJson(json),  // Mapping the JSON response to DTO
