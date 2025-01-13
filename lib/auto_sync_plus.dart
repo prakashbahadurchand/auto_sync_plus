@@ -21,6 +21,10 @@ class AutoSyncPlus {
   }
   AutoSyncPlus._internal();
 
+  void _log(String message) {
+    if (logging) dev.log("[AutoSyncPlus] :: $message");
+  }
+
   /// Checks network connectivity.
   Future<bool> hasInternetAccess() async {
     var connectivityResult = await Connectivity().checkConnectivity();
@@ -135,6 +139,37 @@ class AutoSyncPlus {
     }
   }
 
+/// Fetches data from multiple APIs, caches it, and downloads associated files with progress stream.
+  Stream<double> fetchAndCacheMultipleData<T>({
+    required List<AutoSyncPlusParam<T>> params,
+  }) async* {
+    if (await hasInternetAccess()) {
+      int totalCalls = params.length;
+      int completedCalls = 0;
+
+      for (var param in params) {
+        try {
+          final data = await param.apiCall();
+          final itemMap = param.toJson(data);
+          final List<String> urlsToDownload = [];
+          _findUrlsToDownload(itemMap, urlsToDownload, param.cacheImage, param.cachePDF);
+          for (var url in urlsToDownload) {
+            final localPath = await downloadAndSaveFile(url);
+            if (localPath.isNotEmpty) _replaceUrlWithLocalPath(itemMap, url, localPath);
+          }
+          await saveToCache(param.key, param.toJson(data));
+          completedCalls++;
+          yield completedCalls / totalCalls;
+        } catch (e) {
+          _log("Error fetching data for key: ${param.key} - $e");
+        }
+      }
+    } else {
+      _log("No internet access");
+      yield 0.0;
+    }
+  }
+
   void _findUrlsToDownload(Map<String, dynamic> itemMap, List<String> urlsToDownload, bool cacheImage, bool cachePDF) {
     itemMap.forEach((key, value) {
       if (value is String) {
@@ -206,4 +241,22 @@ class AutoSyncPlus {
       }
     }
   }
+}
+
+class AutoSyncPlusParam<T> {
+  final String key;
+  final Future<T> Function() apiCall;
+  final T Function(Map<String, dynamic>) fromJson;
+  final Map<String, dynamic> Function(T) toJson;
+  final bool cacheImage;
+  final bool cachePDF;
+
+  AutoSyncPlusParam({
+    required this.key,
+    required this.apiCall,
+    required this.fromJson,
+    required this.toJson,
+    this.cacheImage = true,
+    this.cachePDF = true,
+  });
 }
