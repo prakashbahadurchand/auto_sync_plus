@@ -28,7 +28,7 @@ class AutoSyncPlus {
   /// Checks network connectivity.
   Future<bool> hasInternetAccess() async {
     var connectivityResult = await Connectivity().checkConnectivity();
-    return connectivityResult != ConnectivityResult.none;
+    return connectivityResult.any((ConnectivityResult result) => result != ConnectivityResult.none);
   }
 
   /// Saves data to cache.
