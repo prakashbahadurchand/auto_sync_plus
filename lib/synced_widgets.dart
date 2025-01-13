@@ -3,10 +3,9 @@ library;
 import 'dart:developer';
 import 'dart:io';
 
+import 'package:auto_sync_plus/auto_sync_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
-
-import 'auto_sync_plus_v2_backup.dart';
 
 // Photo Widget:
 class SyncedImageView extends StatelessWidget {
