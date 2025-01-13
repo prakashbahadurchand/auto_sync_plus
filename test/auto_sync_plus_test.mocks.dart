@@ -6,7 +6,7 @@
 import 'dart:async' as _i9;
 import 'dart:typed_data' as _i10;
 
-import 'package:auto_sync_plus/auto_sync_plus_v2_backup.dart' as _i6;
+import 'package:auto_sync_plus/auto_sync_plus.dart' as _i6;
 import 'package:file/file.dart' as _i5;
 import 'package:flutter_cache_manager/flutter_cache_manager.dart' as _i2;
 import 'package:flutter_cache_manager/src/cache_store.dart' as _i3;
