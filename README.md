@@ -99,3 +99,9 @@ class CoreRepo {
     // PDF View Full Screen:
     SyncedPDFView(url: pdfUrl);
 ```
+
+## For run testing
+
+```sh
+flutter test test/auto_sync_plus_test.dart
+```
