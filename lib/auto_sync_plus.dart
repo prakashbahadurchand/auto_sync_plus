@@ -277,7 +277,7 @@ class AutoSyncPlus {
   static final AutoSyncPlus _instance = AutoSyncPlus._internal();
   final String _group = 'auto_sync_plus';
   bool logging = false;
-  
+
   factory AutoSyncPlus({bool logging = false}) {
     _instance.logging = logging;
     return _instance;
@@ -524,6 +524,7 @@ class AutoSyncPlus {
     sendPort.send(result);
   }
 }
+
 
 class AutoSyncPlusParam<T> {
   final String key;
