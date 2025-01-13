@@ -5,9 +5,9 @@ import 'dart:io';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
-import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AutoSyncPlus {
   static final AutoSyncPlus _instance = AutoSyncPlus._internal();
@@ -32,17 +32,16 @@ class AutoSyncPlus {
 
   /// Saves data to cache.
   Future<void> saveToCache(String key, dynamic data) async {
-    final cacheManager = DefaultCacheManager();
-    await cacheManager.putFile(key, utf8.encode(jsonEncode(data)), fileExtension: 'json');
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(key, jsonEncode(data));
     if (logging) dev.log("[AutoSyncPlus] :: Data saved to cache with key: $key");
   }
 
   /// Loads data from cache.
   Future<T?> loadFromCache<T>(String key, T Function(Map<String, dynamic>) fromJson) async {
-    final cacheManager = DefaultCacheManager();
-    final fileInfo = await cacheManager.getFileFromCache(key);
-    if (fileInfo == null) return null;
-    final jsonString = await fileInfo.file.readAsString();
+    final prefs = await SharedPreferences.getInstance();
+    final jsonString = prefs.getString(key);
+    if (jsonString == null) return null;
     final Map<String, dynamic> decodedData = jsonDecode(jsonString);
     if (logging) dev.log("[AutoSyncPlus] :: Data loaded from cache with key: $key");
     return fromJson(decodedData);
@@ -180,8 +179,8 @@ class AutoSyncPlus {
 
   /// Deletes all cached preferences under the `_group` namespace.
   Future<void> deleteCachedAllPrefs() async {
-    final cacheManager = DefaultCacheManager();
-    await cacheManager.emptyCache();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
     if (logging) dev.log("[AutoSyncPlus] :: All cached preferences deleted");
   }
 

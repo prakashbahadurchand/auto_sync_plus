@@ -1,4 +1,4 @@
-import 'package:auto_sync_plus/auto_sync_plus.dart';
+import 'package:auto_sync_plus/auto_sync_plus_v2_backup.dart';
 import 'api_client.dart';
 import 'post_dto.dart';
 import 'posts_dto.dart';
