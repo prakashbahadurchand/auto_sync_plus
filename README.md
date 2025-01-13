@@ -5,19 +5,19 @@ A Flutter package that provides utilities for caching and managing offline data,
 ## Features
 
 - **Synced Widgets**:
-    - `SyncedImageView`: Automatically loads images from network or local cache with placeholder support when offline.
-    - `SyncedPDFView`: Displays PDFs from network or local cache with fallback support and smooth rendering using `SfPdfViewer`.
+  - `SyncedImageView`: Automatically loads images from network or local cache with placeholder support when offline.
+  - `SyncedPDFView`: Displays PDFs from network or local cache with fallback support and smooth rendering using `SfPdfViewer`.
 
 - **Offline Support**:
-    - Cache images, PDFs, and data for offline use.
-    - Automatically switch between online and offline sources based on connectivity.
+  - Cache images, PDFs, and data for offline use.
+  - Automatically switch between online and offline sources based on connectivity.
 
 - **Data Management**:
-    - Save and load structured data using `SharedPreferences`.
-    - Fetch and cache data from an API with the option to cache images and PDFs.
+  - Save and load structured data using `SharedPreferences`.
+  - Fetch and cache data from an API with the option to cache images and PDFs.
 
 - **Cache Management**:
-    - Clear cached data and files selectively for efficient storage management.
+  - Clear cached data and files selectively for efficient storage management.
 
 ## Installation
 
@@ -30,7 +30,7 @@ dependencies:
       url: https://github.com/prakashbahadurchand/auto_sync_plus.git
 ```
 
-## Example Usage for auto sync plus:
+## Example Usage for auto sync plus
 
 - On Repository:
 

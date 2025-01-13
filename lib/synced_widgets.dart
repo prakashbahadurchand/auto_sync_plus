@@ -1,4 +1,4 @@
-library auto_sync_plus.synced_widgets;
+library;
 
 import 'dart:developer';
 import 'dart:io';
@@ -34,7 +34,7 @@ class SyncedImageView extends StatelessWidget {
             fit: fit,
           )
         : FutureBuilder<bool>(
-            future: AutoSyncPlus.hasInternetAccess(),
+            future: AutoSyncPlus().hasInternetAccess(),
             builder: (context, connectivitySnapshot) {
               if (connectivitySnapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
@@ -82,7 +82,7 @@ class SyncedPDFView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<bool>(
-      future: AutoSyncPlus.hasInternetAccess(),
+      future: AutoSyncPlus().hasInternetAccess(),
       builder: (context, connectivitySnapshot) {
         if (connectivitySnapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());

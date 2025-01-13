@@ -1,185 +1,208 @@
-library auto_sync_plus;
-
 import 'dart:convert';
-import 'dart:developer';
+import 'dart:developer' as dev;
 import 'dart:io';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class AutoSyncPlus {
+  static final AutoSyncPlus _instance = AutoSyncPlus._internal();
   final String _group = 'auto_sync_plus';
+  bool logging = false;
+  
+  factory AutoSyncPlus({bool logging = false}) {
+    _instance.logging = logging;
+    return _instance;
+  }
+  AutoSyncPlus._internal();
 
-  /// Helper to check network connectivity.
-  static Future<bool> hasInternetAccess() async {
+  /// Checks network connectivity.
+  Future<bool> hasInternetAccess() async {
     var connectivityResult = await Connectivity().checkConnectivity();
-    return connectivityResult.any((ConnectivityResult result) => result != ConnectivityResult.none);
+    return connectivityResult != ConnectivityResult.none;
   }
 
-  /// Helper to save data to shared preferences.
-  Future<void> saveToLocalStorage(String key, dynamic data) async {
-    final prefs = await SharedPreferences.getInstance();
-    prefs.setString("$_group.$key", jsonEncode(data));
+  /// Saves data to cache.
+  Future<void> saveToCache(String key, dynamic data) async {
+    await compute(_saveToCacheInBackground, {'key': key, 'data': data, 'logging': logging});
   }
 
-  /// Helper to load data from shared preferences.
-  Future<List<T>?> loadFromLocalStorage<T>(String key, T Function(Map<String, dynamic>) fromJson) async {
-    final prefs = await SharedPreferences.getInstance();
-    final jsonString = prefs.getString("$_group.$key");
-    if (jsonString == null) return null;
-
-    final List<dynamic> decodedData = jsonDecode(jsonString);
-    return decodedData.map((item) => fromJson(item as Map<String, dynamic>)).toList();
+  Future<void> _saveToCacheInBackground(Map<String, dynamic> params) async {
+    final cacheManager = DefaultCacheManager();
+    final key = params['key'] as String;
+    final data = params['data'];
+    final logging = params['logging'] as bool;
+    await cacheManager.putFile(key, utf8.encode(jsonEncode(data)), fileExtension: 'json');
+    if (logging) dev.log("[AutoSyncPlus] :: Data saved to cache with key: $key");
   }
 
-  /// Helper to download file and save it locally (e.g., image, pdf)
+  /// Loads data from cache.
+  Future<T?> loadFromCache<T>(String key, T Function(Map<String, dynamic>) fromJson) async {
+    return await compute(_loadFromCacheInBackground, {'key': key, 'fromJson': fromJson, 'logging': logging});
+  }
+
+  Future<T?> _loadFromCacheInBackground<T>(Map<String, dynamic> params) async {
+    final cacheManager = DefaultCacheManager();
+    final key = params['key'] as String;
+    final fromJson = params['fromJson'] as T Function(Map<String, dynamic>);
+    final logging = params['logging'] as bool;
+    final fileInfo = await cacheManager.getFileFromCache(key);
+    if (fileInfo == null) return null;
+    final jsonString = await fileInfo.file.readAsString();
+    final Map<String, dynamic> decodedData = jsonDecode(jsonString);
+    if (logging) dev.log("[AutoSyncPlus] :: Data loaded from cache with key: $key");
+    return fromJson(decodedData);
+  }
+
+  /// Downloads a file and saves it locally.
   Future<String> downloadAndSaveFile(String url) async {
+    return await compute(_downloadAndSaveFileInBackground, {'url': url, 'logging': logging});
+  }
+
+  Future<String> _downloadAndSaveFileInBackground(Map<String, dynamic> params) async {
+    final url = params['url'] as String;
+    final logging = params['logging'] as bool;
     try {
       final directory = await getApplicationDocumentsDirectory();
-      //final fileName = url.split('/').last; // Extract file name from URL
-      //final filePath = '${directory.path}/$fileName';
-      final filePath = '${directory.path}/$_group/${_getUniqueFileNameFromUrl(url)}';
-
-      // Check if the file already exists
+      final filePath = '${directory.path}/auto_sync_plus/${_getUniqueFileNameFromUrl(url)}';
       final file = File(filePath);
       if (await file.exists()) {
-        log('File already exists at: $filePath');
-        return filePath; // Skip downloading if the file already exists
+        if (logging) dev.log("[AutoSyncPlus] :: File already exists at: $filePath");
+        return filePath;
       }
-
-      // Download the file using Dio
       final response = await Dio().download(url, filePath);
       if (response.statusCode == 200) {
-        return filePath; // Return the file path where it's saved
+        if (logging) dev.log("[AutoSyncPlus] :: File downloaded and saved at: $filePath");
+        return filePath;
       } else {
         throw Exception('Failed to download file');
       }
     } catch (e) {
-      log('Error downloading file: $e');
+      if (logging) dev.log("[AutoSyncPlus] :: Error downloading file: $e");
       return '';
     }
   }
 
   String _getUniqueFileNameFromUrl(String url) {
-    // Extract the file extension from the URL
     String extension = path.extension(url);
-
-    // Convert URL to a byte array and generate the hash
     var bytes = utf8.encode(url);
-    var digest = sha256.convert(bytes); // You can use other hash algorithms like MD5 or SHA1 as well
-
-    // Create the unique file name by appending the extension
-    String uniqueFileName = digest.toString() + extension;
-
-    return uniqueFileName;
+    var digest = sha256.convert(bytes);
+    return digest.toString() + extension;
   }
 
-  /// Helper to check if a file exists at the given local path
   Future<bool> _fileExists(String localPath) async {
-    final file = File(localPath);
-    return await file.exists();
+    return await File(localPath).exists();
   }
 
+  /// Gets the saved file path for a given URL.
   Future<String?> getSavedFilePath(String url) async {
     final directory = await getApplicationDocumentsDirectory();
-    //final fileName = url.split('/').last; // Extract file name from URL
     final filePath = '${directory.path}/$_group/${_getUniqueFileNameFromUrl(url)}';
-    if (await _fileExists(filePath)) {
-      return filePath;
-    }
-    return null;
+    return await _fileExists(filePath) ? filePath : null;
   }
 
-  /// Fetch and cache data with local file saving
-  Future<List<T>> fetchAndCacheData<T>(String key, Future<List<T>> Function() apiCall,
-      T Function(Map<String, dynamic>) fromJson, Map<String, dynamic> Function(T) toJson, // Serialization function
-      {bool cacheImage = true,
-      bool cachePDF = true} // New flags for caching
-      ) async {
+  /// Fetches data from API, caches it, and downloads associated files.
+  Future<T> fetchAndCacheData<T>({
+    required String key,
+    required Future<T> Function() apiCall,
+    required T Function(Map<String, dynamic>) fromJson,
+    required Map<String, dynamic> Function(T) toJson,
+    bool cacheImage = true,
+    bool cachePDF = true,
+  }) async {
     if (await hasInternetAccess()) {
       try {
-        // Fetch data from API
         final data = await apiCall();
-
-        // Check if any URL contains an image or PDF, and download them
-        for (var item in data) {
-          final itemMap = toJson(item);
-          final List<String> urlsToDownload = [];
-
-          itemMap.forEach((key, value) {
-            if (value is String) {
-              // Add image URLs for caching if `cacheImage` is true
-              if (cacheImage && (value.endsWith('.jpg') || value.endsWith('.jpeg') || value.endsWith('.png'))) {
-                urlsToDownload.add(value);
-              }
-
-              // Add PDF URLs for caching if `cachePDF` is true
-              if (cachePDF && value.endsWith('.pdf')) {
-                urlsToDownload.add(value);
-              }
-            }
-          });
-
-          // Download files and update the item with local file paths
-          for (var url in urlsToDownload) {
-            final localPath = await downloadAndSaveFile(url);
-            if (localPath.isNotEmpty) {
-              // Replace the URL with the local file path
-              itemMap.update('localFilePath', (_) => localPath, ifAbsent: () => localPath);
-            }
-          }
+        final itemMap = toJson(data);
+        final List<String> urlsToDownload = [];
+        _findUrlsToDownload(itemMap, urlsToDownload, cacheImage, cachePDF);
+        for (var url in urlsToDownload) {
+          final localPath = await downloadAndSaveFile(url);
+          if (localPath.isNotEmpty) _replaceUrlWithLocalPath(itemMap, url, localPath);
         }
-
-        // Save the updated data to local storage
-        await saveToLocalStorage(key, data.map((e) => toJson(e)).toList());
+        await saveToCache(key, toJson(data));
         return data;
       } catch (e) {
-        // On API error, fallback to local storage
-        return (await loadFromLocalStorage(key, fromJson)) ?? [];
+        return (await loadFromCache(key, fromJson))!;
       }
     } else {
-      // If offline, load from local storage
-      return (await loadFromLocalStorage(key, fromJson)) ?? [];
+      return (await loadFromCache(key, fromJson))!;
     }
   }
 
-  /// Delete all cached preferences under the `_group` namespace
+  void _findUrlsToDownload(Map<String, dynamic> itemMap, List<String> urlsToDownload, bool cacheImage, bool cachePDF) {
+    itemMap.forEach((key, value) {
+      if (value is String) {
+        if (cacheImage && (value.endsWith('.jpg') || value.endsWith('.jpeg') || value.endsWith('.png'))) urlsToDownload.add(value);
+        if (cachePDF && value.endsWith('.pdf')) urlsToDownload.add(value);
+      } else if (value is Map<String, dynamic>) {
+        _findUrlsToDownload(value, urlsToDownload, cacheImage, cachePDF);
+      } else if (value is List) {
+        for (var item in value) {
+          if (item is Map<String, dynamic>) _findUrlsToDownload(item, urlsToDownload, cacheImage, cachePDF);
+        }
+      }
+    });
+  }
+
+  void _replaceUrlWithLocalPath(Map<String, dynamic> itemMap, String url, String localPath) {
+    itemMap.forEach((key, value) {
+      if (value is String && value == url) {
+        itemMap[key] = localPath;
+      } else if (value is Map<String, dynamic>) {
+        _replaceUrlWithLocalPath(value, url, localPath);
+      } else if (value is List) {
+        for (var item in value) {
+          if (item is Map<String, dynamic>) _replaceUrlWithLocalPath(item, url, localPath);
+        }
+      }
+    });
+  }
+
+  /// Deletes all cached preferences under the `_group` namespace.
   Future<void> deleteCachedAllPrefs() async {
-    final prefs = await SharedPreferences.getInstance();
-    final keysToDelete = prefs.getKeys().where((key) => key.startsWith('$_group.'));
-    for (var key in keysToDelete) {
-      await prefs.remove(key);
-    }
+    await compute(_deleteCachedAllPrefsInBackground, {'logging': logging});
   }
 
-  /// Delete all cached files under the `_group` directory with optional flags for selective deletion.
+  Future<void> _deleteCachedAllPrefsInBackground(Map<String, dynamic> params) async {
+    final logging = params['logging'] as bool;
+    final cacheManager = DefaultCacheManager();
+    await cacheManager.emptyCache();
+    if (logging) dev.log("[AutoSyncPlus] :: All cached preferences deleted");
+  }
+
+  /// Deletes all cached files under the `_group` directory with optional flags for selective deletion.
   Future<void> deleteCachedAllFiles({bool deleteImage = true, bool deletePDF = true}) async {
+    await compute(_deleteCachedAllFilesInBackground, {'deleteImage': deleteImage, 'deletePDF': deletePDF, 'logging': logging});
+  }
+
+  Future<void> _deleteCachedAllFilesInBackground(Map<String, dynamic> params) async {
+    final deleteImage = params['deleteImage'] as bool;
+    final deletePDF = params['deletePDF'] as bool;
+    final logging = params['logging'] as bool;
     final directory = await getApplicationDocumentsDirectory();
-    final groupDirectory = Directory('${directory.path}/$_group');
+    final groupDirectory = Directory('${directory.path}/auto_sync_plus');
 
     if (await groupDirectory.exists()) {
-      // List all files in the directory
       final files = groupDirectory.listSync(recursive: true).whereType<File>();
-
       for (var file in files) {
         final filePath = file.path;
         final fileExtension = path.extension(filePath).toLowerCase();
-
-        // Check file type and delete based on flags
         if ((deleteImage && (fileExtension == '.jpg' || fileExtension == '.jpeg' || fileExtension == '.png')) ||
             (deletePDF && fileExtension == '.pdf') ||
             (!deleteImage && !deletePDF)) {
           await file.delete();
+          if (logging) dev.log("[AutoSyncPlus] :: Deleted file: $filePath");
         }
       }
-
-      // If the directory is empty after file deletion, remove the directory
       if (groupDirectory.listSync().isEmpty) {
         await groupDirectory.delete();
+        if (logging) dev.log("[AutoSyncPlus] :: Deleted directory: ${groupDirectory.path}");
       }
     }
   }

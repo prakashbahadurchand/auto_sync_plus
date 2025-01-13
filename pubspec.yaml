@@ -1,6 +1,6 @@
 name: auto_sync_plus
 description: "Auto Sync Plus for JSON responses & files."
-version: 0.0.1
+version: 0.0.3
 homepage: https://github.com/prakashbahadurchand/auto_sync_plus
 
 environment:
@@ -10,18 +10,16 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  connectivity_plus: ^6.1.0
+  connectivity_plus: ^6.1.1
   crypto: ^3.0.6
   dio: ^5.7.0
   path: ^1.9.0
   path_provider: ^2.1.5
-  shared_preferences: ^2.3.3
-  syncfusion_flutter_pdfviewer: ^27.2.5
+  shared_preferences: ^2.3.5
+  syncfusion_flutter_pdfviewer: ^28.1.38
+  flutter_cache_manager: ^3.4.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^4.0.0
-
-
-flutter:
+  flutter_lints: ^5.0.0
