@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.0.2] - 2024-12-14
+### Bug Fixes
+- Fixed issue where cached PDFs would fail to render in certain cases due to a missing null check.
+
+### Improvements
+- Improved error handling for network connectivity issues during image loading.
+- Enhanced caching mechanism for faster offline access to images and PDFs.
+
 ## [0.0.1] - 2024-12-07
 ### Initial Release
 

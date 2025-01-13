@@ -95,15 +95,16 @@ class AutoSyncPlus {
   }
 
   /// Fetch and cache data with local file saving
-  Future<List<T>> fetchAndCacheData<T>(String key, Future<List<T>> Function() apiCall,
-      T Function(Map<String, dynamic>) fromJson, Map<String, dynamic> Function(T) toJson, // Serialization function
+  Future<List<T>> fetchAndCacheData<T>(
+      String key, Future<T> Function() apiCall, T Function(Map<String, dynamic>) fromJson, Map<String, dynamic> Function(T) toJson, // Serialization function
       {bool cacheImage = true,
       bool cachePDF = true} // New flags for caching
       ) async {
     if (await hasInternetAccess()) {
       try {
         // Fetch data from API
-        final data = await apiCall();
+        final res = await apiCall();
+        final data = [res];
 
         // Check if any URL contains an image or PDF, and download them
         for (var item in data) {

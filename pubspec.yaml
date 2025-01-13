@@ -1,6 +1,6 @@
 name: auto_sync_plus
 description: "Auto Sync Plus for JSON responses & files."
-version: 0.0.1
+version: 0.0.2
 homepage: https://github.com/prakashbahadurchand/auto_sync_plus
 
 environment:
