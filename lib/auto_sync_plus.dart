@@ -5,7 +5,6 @@ import 'dart:io';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
@@ -33,28 +32,14 @@ class AutoSyncPlus {
 
   /// Saves data to cache.
   Future<void> saveToCache(String key, dynamic data) async {
-    await compute(_saveToCacheInBackground, {'key': key, 'data': data, 'logging': logging});
-  }
-
-  Future<void> _saveToCacheInBackground(Map<String, dynamic> params) async {
     final cacheManager = DefaultCacheManager();
-    final key = params['key'] as String;
-    final data = params['data'];
-    final logging = params['logging'] as bool;
     await cacheManager.putFile(key, utf8.encode(jsonEncode(data)), fileExtension: 'json');
     if (logging) dev.log("[AutoSyncPlus] :: Data saved to cache with key: $key");
   }
 
   /// Loads data from cache.
   Future<T?> loadFromCache<T>(String key, T Function(Map<String, dynamic>) fromJson) async {
-    return await compute(_loadFromCacheInBackground, {'key': key, 'fromJson': fromJson, 'logging': logging});
-  }
-
-  Future<T?> _loadFromCacheInBackground<T>(Map<String, dynamic> params) async {
     final cacheManager = DefaultCacheManager();
-    final key = params['key'] as String;
-    final fromJson = params['fromJson'] as T Function(Map<String, dynamic>);
-    final logging = params['logging'] as bool;
     final fileInfo = await cacheManager.getFileFromCache(key);
     if (fileInfo == null) return null;
     final jsonString = await fileInfo.file.readAsString();
@@ -65,12 +50,6 @@ class AutoSyncPlus {
 
   /// Downloads a file and saves it locally.
   Future<String> downloadAndSaveFile(String url) async {
-    return await compute(_downloadAndSaveFileInBackground, {'url': url, 'logging': logging});
-  }
-
-  Future<String> _downloadAndSaveFileInBackground(Map<String, dynamic> params) async {
-    final url = params['url'] as String;
-    final logging = params['logging'] as bool;
     try {
       final directory = await getApplicationDocumentsDirectory();
       final filePath = '${directory.path}/auto_sync_plus/${_getUniqueFileNameFromUrl(url)}';
@@ -139,7 +118,7 @@ class AutoSyncPlus {
     }
   }
 
-/// Fetches data from multiple APIs, caches it, and downloads associated files with progress stream.
+  /// Fetches data from multiple APIs, caches it, and downloads associated files with progress stream.
   Stream<double> fetchAndCacheMultipleData<T>({
     required List<AutoSyncPlusParam<T>> params,
   }) async* {
@@ -201,11 +180,6 @@ class AutoSyncPlus {
 
   /// Deletes all cached preferences under the `_group` namespace.
   Future<void> deleteCachedAllPrefs() async {
-    await compute(_deleteCachedAllPrefsInBackground, {'logging': logging});
-  }
-
-  Future<void> _deleteCachedAllPrefsInBackground(Map<String, dynamic> params) async {
-    final logging = params['logging'] as bool;
     final cacheManager = DefaultCacheManager();
     await cacheManager.emptyCache();
     if (logging) dev.log("[AutoSyncPlus] :: All cached preferences deleted");
@@ -213,13 +187,6 @@ class AutoSyncPlus {
 
   /// Deletes all cached files under the `_group` directory with optional flags for selective deletion.
   Future<void> deleteCachedAllFiles({bool deleteImage = true, bool deletePDF = true}) async {
-    await compute(_deleteCachedAllFilesInBackground, {'deleteImage': deleteImage, 'deletePDF': deletePDF, 'logging': logging});
-  }
-
-  Future<void> _deleteCachedAllFilesInBackground(Map<String, dynamic> params) async {
-    final deleteImage = params['deleteImage'] as bool;
-    final deletePDF = params['deletePDF'] as bool;
-    final logging = params['logging'] as bool;
     final directory = await getApplicationDocumentsDirectory();
     final groupDirectory = Directory('${directory.path}/auto_sync_plus');
 

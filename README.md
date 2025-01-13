@@ -13,7 +13,7 @@ A Flutter package that provides utilities for caching and managing offline data,
   - Automatically switch between online and offline sources based on connectivity.
 
 - **Data Management**:
-  - Save and load structured data using `SharedPreferences`.
+  - Save and load structured data using `flutter_cache_manager`.
   - Fetch and cache data from an API with the option to cache images and PDFs.
 
 - **Cache Management**:
@@ -36,45 +36,47 @@ dependencies:
 
 ```dart
 
+import 'package:auto_sync_plus/auto_sync_plus.dart';
+
 class CoreRepo {
   final AutoSyncPlus autoSync = AutoSyncPlus();
 
-  final List<Future<void> Function()> _syncTasks = [
-    () => CoreRepo().getDataFromFirstApiCall(),
-    () => CoreRepo().getDataFromSecondApiCall(),
+  final List<AutoSyncPlusParam> _syncTasks = [
+    AutoSyncPlusParam(
+      key: 'first_api_call',
+      apiCall: () => CoreApiClient(buildDioClient(null)).getDataFromFirstApiCall(),
+      fromJson: (json) => FirstApiDto.fromJson(json),
+      toJson: (dto) => dto.toJson(),
+    ),
+    AutoSyncPlusParam(
+      key: 'second_api_call',
+      apiCall: () => CoreApiClient(buildDioClient(null)).getDataFromSecondApiCall(),
+      fromJson: (json) => SecondApiDto.fromJson(json),
+      toJson: (dto) => dto.toJson(),
+    ),
   ];
 
-  // Get sync percentage for show download all data with progress
-  Stream<int> syncAllDataWithProgress() async* {
-    final int totalTasks = _syncTasks.length;
-    int completedTasks = 0;
-
-    for (var syncTask in _syncTasks) {
-      try {
-        await syncTask();
-        completedTasks++;
-        yield (completedTasks / totalTasks * 100).toInt(); // Emit progress as percentage
-      } catch (e) {
-        log('Error syncing task: $e');
-        toast('Error syncing task: $e');
-      }
+  // Get sync percentage for showing download progress
+  Stream<double> syncAllDataWithProgress() async* {
+    await for (var progress in autoSync.fetchAndCacheMultipleData(params: _syncTasks)) {
+      yield progress; // Emit progress as a percentage
     }
   }
 
-  // Fetching and caching for first api call
+  // Fetching and caching for first API call
   Future<List<FirstApiDto>> getDataFromFirstApiCall() => autoSync.fetchAndCacheData(
-        'first_api_call',
-        () => CoreApiClient(buildDioClient(null)).getDataFromFirstApiCall(), // API call to get data
-        (json) => FirstApiDto.fromJson(json),  // Mapping the JSON response to DTO
-        (dto) => dto.toJson(),  // Mapping the DTO to JSON for caching
+        key: 'first_api_call',
+        apiCall: () => CoreApiClient(buildDioClient(null)).getDataFromFirstApiCall(), // API call to get data
+        fromJson: (json) => FirstApiDto.fromJson(json),  // Mapping the JSON response to DTO
+        toJson: (dto) => dto.toJson(),  // Mapping the DTO to JSON for caching
       );
 
-  // Fetching and caching another api call
+  // Fetching and caching another API call
   Future<List<SecondApiDto>> getDataFromSecondApiCall() => autoSync.fetchAndCacheData(
-        'second_api_call',
-        () => CoreApiClient(buildDioClient(null)).getDataFromSecondApiCall(), // API call to get data
-        (json) => SecondApiDto.fromJson(json),  // Mapping the JSON response to DTO
-        (dto) => dto.toJson(),  // Mapping the DTO to JSON for caching
+        key: 'second_api_call',
+        apiCall: () => CoreApiClient(buildDioClient(null)).getDataFromSecondApiCall(), // API call to get data
+        fromJson: (json) => SecondApiDto.fromJson(json),  // Mapping the JSON response to DTO
+        toJson: (dto) => dto.toJson(),  // Mapping the DTO to JSON for caching
       );
 }
 
@@ -85,15 +87,21 @@ class CoreRepo {
 
 ```dart
 
-    // ImageView:
+    // ImageView Sized:
     SyncedImageView(
         url: imageUrl,
-        width: double.infinity,
+        width: 50,
         height: 50,
         fit: BoxFit.cover,
-        placeholder: AppAsset.imgPlaceholder,
+        placeholder: 'assets/images/img_placeholder.png',
     );
 
-    // PDF View:
+    // PDF View Full Screen:
     SyncedPDFView(url: pdfUrl);
+```
+
+## For run testing
+
+```sh
+flutter test test/auto_sync_plus_test.dart
 ```
